@@ -15,10 +15,7 @@ Follow these steps to set up the project locally.
 
 ### Prerequisites
 
-Make sure you have the following installed on your machine:
-
-- [Node.js](https://nodejs.org/) (version X.X.X or higher)
-- [npm](https://www.npmjs.com/) or [Yarn](https://yarnpkg.com/)
+Make sure you have [Node.js](https://nodejs.org/) installed on your machine
 
 ### Installation
 
