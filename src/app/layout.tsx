@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import TopBar from "@/components/topbar";
+import NavigationBar from "@/components/navigation-bar";
+import { Maven_Pro } from "next/font/google";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -12,6 +15,8 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
+
+const maven = Maven_Pro({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,10 +30,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${maven.className} antialiased`}>
+        <div className="min-h-screen flex bg-white text-gray-600">
+          <NavigationBar />
+
+          <main className="flex-1 py-8 pl-2 pr-16">
+            <TopBar />
+
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

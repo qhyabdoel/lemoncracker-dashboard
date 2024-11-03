@@ -1,101 +1,212 @@
+"use client";
+
 import Image from "next/image";
+import DateRangeFilter from "@/components/filters/date-range-picker";
+import EChartsReact, { EChartsOption } from "echarts-for-react";
+import TopCardsItem from "@/components/cards/top-cards-item";
+
+import imageCracker from "@/assets/images/header-cracker.svg";
+import iconDarkEye from "@/assets/icons/icon-square-dark-eye.svg";
+import iconDarkUpLeft from "@/assets/icons/icon-square-dark-up-left.svg";
+import iconDarkClock from "@/assets/icons/icon-square-dark-clock.svg";
+import iconDarkTarget from "@/assets/icons/icon-square-dark-target.svg";
+import iconLightTarget from "@/assets/icons/icon-square-light-target.svg";
+import iconLightClock from "@/assets/icons/icon-square-light-clock.svg";
+import iconLightUpLeft from "@/assets/icons/icon-square-light-up-left.svg";
+import iconLightEye from "@/assets/icons/icon-square-light-eye.svg";
+
+import {
+  formatDate,
+  formatIntTimes,
+  formatValue,
+  generateChartOpt,
+} from "@/utils";
+import getData from "@/data";
+import { useEffect, useRef, useState } from "react";
+import LeftCardsItem from "@/components/cards/left-cards-item";
+import generateChartData from "@/data/chart-data";
+import { chartTitleList } from "@/const";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [chartOpt, setChartOpt] = useState<EChartsOption>();
+  const echartRef = useRef<EChartsReact>(null);
+  const [dataKey, setDataKey] = useState<ValueKeyProp>("total_interactions");
+  const [selectedDataIndex, setSelectedDataIndex] = useState(0);
+  const [startDate, setStartDate] = useState("November 2023");
+  const [endDate, setEndDate] = useState("October 2024");
+  const [setisConsts, setSeriesConsts] = useState<Array<MetricDataProps>>([]);
+  const [seriesData, setSeriesData] = useState<Array<MetricDataProps>>();
+  const [chartAxisData, serChartAxisData] = useState<Array<string>>([]);
+  const [axisConsts, setAxisConsts] = useState<Array<string>>([]);
+  const [selectedDataObj, setSelectedDataObj] = useState<MetricDataProps>();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    // console.log({ startDate, endDate });
+
+    // Find the indices for the start and end months
+    if (seriesData) {
+      const startIndex = setisConsts.findIndex((m) => m.month === startDate);
+      const endIndex = setisConsts.findIndex((m) => m.month === endDate);
+
+      // Slice the array from startIndex to endIndex + 1 (to include "April 2024")
+      const result = setisConsts.slice(startIndex, endIndex + 1);
+      const newAxisData = axisConsts.slice(startIndex, endIndex + 1);
+
+      setSeriesData(result);
+      serChartAxisData(newAxisData);
+    }
+  }, [endDate, startDate]);
+
+  useEffect(() => {
+    if (seriesData) {
+      const metricsItem = seriesData[selectedDataIndex];
+      if (metricsItem) setSelectedDataObj(metricsItem);
+    }
+  }, [selectedDataIndex, seriesData]);
+
+  useEffect(() => {
+    getData().then((res) => {
+      serChartAxisData(res.xAxisData);
+      setAxisConsts(res.xAxisData);
+      setSeriesData(res.data);
+      setSeriesConsts(res.data);
+      setSelectedDataIndex(Math.round(res.data.length / 2));
+    });
+  }, []);
+
+  useEffect(() => {
+    if (seriesData && seriesData && chartAxisData && selectedDataIndex) {
+      const generateChartDataParams: GenerateChartDataProps = {
+        valueKey: dataKey,
+        xAxisData: chartAxisData,
+        selectedIndex: selectedDataIndex,
+        data: seriesData,
+      };
+      const optios = generateChartData(generateChartDataParams);
+      setChartOpt(optios);
+    }
+  }, [chartAxisData, dataKey, selectedDataIndex, seriesData]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleChartClick = (params: any) => {
+    if (echartRef.current) {
+      const chart = echartRef.current.getEchartsInstance();
+      const option = generateChartOpt(chart, params);
+
+      // Apply the updated options
+      chart.setOption(option);
+      setSelectedDataIndex(params.dataIndex);
+    }
+  };
+
+  return (
+    <div>
+      {/* header */}
+      <div className="flex mb-4">
+        <div className="mr-2">
+          <Image alt="image" src={imageCracker} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div>
+          <div className="text-xs mb-1">{"ABC Cracker > Lemon Cracker"}</div>
+          <div className="text-3xl text-black">Lemon Cracker</div>
+        </div>
+      </div>
+
+      <div className="flex mb-4">
+        <div className="flex-auto text-sm">Here will be some text</div>
+        <div className="flex-auto">
+          <DateRangeFilter
+            setEndDate={setEndDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            startDate={startDate}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        <TopCardsItem
+          title="Total number of interactions"
+          amount={formatValue(selectedDataObj?.total_interactions)}
+          icon={
+            dataKey === "total_interactions" ? iconLightTarget : iconDarkTarget
+          }
+          active={dataKey === "total_interactions"}
+          handleClick={() => setDataKey("total_interactions")}
+        />
+        <TopCardsItem
+          title="Total number of unique users"
+          amount={formatValue(selectedDataObj?.unique_users)}
+          icon={dataKey === "unique_users" ? iconLightEye : iconDarkEye}
+          active={dataKey === "unique_users"}
+          handleClick={() => setDataKey("unique_users")}
+        />
+        <TopCardsItem
+          title="CTA click count"
+          amount={formatValue(selectedDataObj?.cta_click_count)}
+          icon={
+            dataKey === "cta_click_count" ? iconLightUpLeft : iconDarkUpLeft
+          }
+          active={dataKey === "cta_click_count"}
+          handleClick={() => setDataKey("cta_click_count")}
+        />
+        <TopCardsItem
+          title="Average time spent"
+          amount={formatIntTimes(selectedDataObj?.total_interactions)}
+          icon={
+            dataKey === "average_time_spent" ? iconLightClock : iconDarkClock
+          }
+          active={dataKey === "average_time_spent"}
+          handleClick={() => setDataKey("average_time_spent")}
+        />
+      </div>
+
+      <div className="bg-gray-100 p-6 rounded-lg mb-8">
+        <div className="inline-flex w-full">
+          <div className="w-5/6 text-xl text-gray-900">
+            <label>{chartTitleList[dataKey]}</label>
+            <div>
+              {chartOpt ? (
+                <EChartsReact
+                  style={{ height: "400px" }}
+                  option={chartOpt}
+                  ref={echartRef}
+                  onEvents={{ click: handleChartClick }}
+                />
+              ) : (
+                <div className="w-full text-center mt-32 text-2xl font-semibold text-gray-400">
+                  Loading chart....
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="w-1/6">
+            <div className="w-full text-right mb-4">
+              <label className="text-sm">
+                {formatDate(selectedDataObj?.month)}
+              </label>
+            </div>
+            <div>
+              <LeftCardsItem
+                title="Total number of interactions"
+                value={formatValue(selectedDataObj?.total_interactions)}
+              />
+              <LeftCardsItem
+                title="Total number of unique users"
+                value={formatValue(selectedDataObj?.unique_users)}
+              />
+              <LeftCardsItem
+                title="CTA click count"
+                value={formatValue(selectedDataObj?.cta_click_count)}
+              />
+              <LeftCardsItem
+                title="Average time spent"
+                value={formatIntTimes(selectedDataObj?.average_time_spent)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
